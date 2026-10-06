@@ -146,6 +146,43 @@
     if (root.navigator.clipboard && root.isSecureContext) root.navigator.clipboard.writeText(text).then(function () { done(true); }, fallback); else fallback();
   }
 
+  /* ---------- keeping progress safe ---------- */
+  ctx.standalone = !!((root.matchMedia && root.matchMedia('(display-mode: standalone)').matches) || root.navigator.standalone);
+  ctx.iosSafari = /iPad|iPhone|iPod/.test(root.navigator.userAgent) || (root.navigator.platform === 'MacIntel' && root.navigator.maxTouchPoints > 1);
+  ctx.canShare = !!root.navigator.share && !!(root.matchMedia && root.matchMedia('(pointer: coarse)').matches);
+  ctx.persisted = null;
+  function askPersist() {          // ask the browser to keep this site's data even when space runs low
+    var s = root.navigator.storage; if (!s || !s.persisted) return;
+    s.persisted().then(function (p) { return p || !s.persist ? p : s.persist(); }).then(function (p) {
+      var changed = ctx.persisted !== !!p; ctx.persisted = !!p; if (changed && cur.name === 'more') rerender();
+    }, function () { /* not supported here */ });
+  }
+  function markBackup() { store.setPref('backupAt', Date.now()); store.setPref('backupCode', store.exportCode()); }
+  ctx.backupInfo = function () {
+    var at = store.getPref('backupAt', 0); if (!at) return 'never';
+    var d = Math.floor((Date.now() - at) / 864e5), when = d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago';
+    return when + (store.getPref('backupCode', '') === store.exportCode() ? ', up to date' : ', progress has changed since');
+  };
+  /* One quiet hint at most: iPhone Safari without the Home Screen app, else a backup reminder once there is something worth saving. */
+  ctx.nudge = function () {
+    if (ctx.iosSafari && !ctx.standalone && !store.getPref('iosDismissed', 0)) return 'ios';
+    if (store.state.done.size < 3) return null;
+    var now = Date.now();
+    if (now < store.getPref('snoozeUntil', 0) || store.getPref('backupCode', '') === store.exportCode()) return null;
+    var base = store.getPref('backupAt', 0) || store.getPref('since', now);
+    return now - base > 3 * 864e5 ? 'backup' : null;
+  };
+  function backup() {
+    var code = store.exportCode(), link = ctx.baseUrl() + '#/import/' + code;
+    if (ctx.canShare) {
+      root.navigator.share({ title: 'My Terminus progress', text: 'My Terminus progress. Open this link on any device to restore it.', url: link })
+        .then(function () { markBackup(); rerender(); toast('Backup sent. Keep that message.'); }, function () { /* cancelled */ });
+    } else copy(code, function (ok) {
+      if (ok) { markBackup(); rerender(); }
+      toast(ok ? 'Code copied. Paste it into Saved Messages or a note.' : 'Could not copy. Open More and copy the code by hand.');
+    });
+  }
+
   /* ---------- clicks ---------- */
   function ids(el) { return (el.getAttribute('data-ids') || '').split(',').filter(Boolean); }
   function cutAmount() { return ctx.cutAmount == null ? core.overload(core.target(store.state, ctx.today())) : ctx.cutAmount; }
@@ -166,7 +203,7 @@
       case 'reverse': afterUndo(store.reverse(+el.getAttribute('data-eid'))); break;
       case 'reapply': afterRedo(store.reapply(+el.getAttribute('data-eid'))); break;
       case 'cut-step': ctx.cutAmount = Math.max(0, Math.round((cutAmount() + parseFloat(el.getAttribute('data-d'))) * 2) / 2); rerender(); break;
-      case 'copy': copy(el.getAttribute('data-what') === 'link' ? ctx.baseUrl() + '#/import/' + store.exportCode() : store.exportCode(), function (ok) { toast(ok ? 'Copied.' : 'Could not copy. Select the code and copy it by hand.'); }); break;
+      case 'copy': copy(el.getAttribute('data-what') === 'link' ? ctx.baseUrl() + '#/import/' + store.exportCode() : store.exportCode(), function (ok) { if (ok) markBackup(); toast(ok ? 'Copied.' : 'Could not copy. Select the code and copy it by hand.'); }); break;
       case 'import-check': var ta = $('code-in'), text = ta ? ta.value : ''; ctx.imp = { text: text, res: store.parseCode(text) }; rerender(); break;
       case 'import-apply': if (ctx.imp && ctx.imp.res && ctx.imp.res.ok) { e = store.replaceAll(ctx.imp.res.done, ctx.imp.res.parked, 'import'); ctx.imp = null; rerender(); toast(e ? 'Progress loaded from the code.' : 'That code matches what is already here.', e ? ['undo', 'Undo'] : null); } break;
       case 'import-cancel': ctx.imp = null; rerender(); break;
@@ -175,6 +212,9 @@
       case 'reset-do': ctx.resetAsk = false; e = store.reset(); rerender(); if (e) toast('All progress cleared.', ['undo', 'Undo']); break;
       case 'tone': FE.tear.setTone(el.getAttribute('data-tone')); store.setPref('tone', FE.tear.getTone()); rerender(); break;
       case 'install': if (ctx.deferredPrompt) { ctx.deferredPrompt.prompt(); ctx.deferredPrompt = null; ctx.canInstall = false; rerender(); } break;
+      case 'share': case 'backup-now': backup(); break;
+      case 'nudge-later': store.setPref('snoozeUntil', Date.now() + 7 * 864e5); rerender(); break;
+      case 'nudge-ios': store.setPref('iosDismissed', 1); rerender(); break;
       case 'toast-close': hideToast(); break;
       case 'reload': root.location.reload(); break;
     }
@@ -189,7 +229,7 @@
     }
   });
 
-  store.subscribe(function () { rerender(); });
+  store.subscribe(function () { if (!store.getPref('since', 0)) store.setPref('since', Date.now()); if (ctx.persisted !== true) askPersist(); rerender(); });
   root.addEventListener('hashchange', route);
   root.addEventListener('pointerdown', function () { FE.tear.prime(); }, { once: true, passive: true });
   root.addEventListener('beforeinstallprompt', function (ev) { ev.preventDefault(); ctx.deferredPrompt = ev; ctx.canInstall = true; if (cur.name === 'more') rerender(); });
@@ -203,7 +243,7 @@
       had = true;
     });
   }
-  if (root.navigator.storage && root.navigator.storage.persist) root.navigator.storage.persist().catch(function () {});
+  askPersist();
 
   FE.tear.setTone(store.getPref('tone', 'soft'), true);
   FE.app = { core: core, store: store, ctx: ctx, route: route, render: render, V: V, toast: toast };

@@ -126,6 +126,12 @@
         '</tbody><caption>Open means points not done yet. Exams run 2 to 5 PM.</caption></table></aside>';
     }
 
+    function nudge() {
+      var n = ctx.nudge ? ctx.nudge() : null; if (!n) return '';
+      if (n === 'ios') return '<aside class="nudge" aria-label="Keep your progress safe"><p><b>Keep your progress on iPhone.</b> Safari clears saved data after about a week without opening a site. Add Terminus to your Home Screen and it stays.</p><div class="row-actions"><a class="btn warm sm" href="#/more">Show me how</a><button class="btn ghost-dark sm" data-act="nudge-ios">Not now</button></div></aside>';
+      return '<aside class="nudge" aria-label="Back up your progress"><p><b>Back up your progress.</b> ' + store.state.done.size + ' topics done and no recent backup. Send your code to yourself once; it restores everything if the browser ever clears its data.</p><div class="row-actions"><button class="btn warm sm" data-act="backup-now">Back up now</button><button class="btn ghost-dark sm" data-act="nudge-later">Later</button></div></aside>';
+    }
+
     function today() {
       var date = ctx.today(), st = store.state, stage = core.stage(date), info = core.dayInfo(date), tg = core.target(st, date), next = core.nextTopics(tg);
       var preview = ctx.preview ? '<p class="pace-note">Preview date. Your device date is not used.</p>' : '';
@@ -137,7 +143,7 @@
         (tg ? '<div class="punches" role="img" aria-label="' + f1(tg.got) + ' of ' + f1(tg.due) + ' points done">' + u.holes(tg.got, tg.due) + '</div><p class="pace-note">' + paceNote(tg) + '</p>' : '') +
         (tg && tg.overdue ? '<p class="pace-note">Earlier checkpoints still have <b>' + f1(tg.carry) + ' pts</b> open. They count here, so the pace above already includes them.</p>' : '') +
         '</div>' +
-        (next.length ? '<h2 class="sr">Next topics</h2><ol class="stubs">' + next.map(function (id, i) { return stub(id, i === 0); }).join('') + '</ol>' : emptyBlock(tg, date, info, stage)) + '</section>' + board(date);
+        (next.length ? '<h2 class="sr">Next topics</h2><ol class="stubs">' + next.map(function (id, i) { return stub(id, i === 0); }).join('') + '</ol>' : emptyBlock(tg, date, info, stage)) + '</section><div class="side">' + board(date) + nudge() + '</div>';
       return { html: html, title: core.fmt(date), cls: 'today' };
     }
 

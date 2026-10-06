@@ -299,7 +299,8 @@ textarea.code{min-height:84px;resize:vertical}
   .nav a svg{width:20px;height:20px}
   .shell{padding-top:0}
   .view.today{grid-template-columns:490px minmax(0,1fr);gap:26px 48px;align-items:start}
-  .view.today .board{position:sticky;top:24px;padding:22px 22px 14px}
+  .view.today .side{position:sticky;top:24px}
+  .view.today .board{padding:22px 22px 14px}
   .view.today .board h2{font-size:30px;margin-bottom:12px}
   .view.today .board table{font-size:14px}
   .view.today .board td{padding:14px 8px}
@@ -326,3 +327,12 @@ textarea.code{min-height:84px;resize:vertical}
 .skip:focus{top:10px}
 h1:focus,.view:focus{outline:none;box-shadow:none}
 .plain-list li.cur{outline:2px solid var(--ink)}
+
+/* ---------- keeping progress safe ---------- */
+.side{display:grid;gap:18px}
+.nudge{background:var(--board);border:1px solid var(--edge);border-radius:14px;padding:14px 14px 12px;color:var(--warm)}
+.nudge p{font-size:14.5px;margin:0 0 10px;color:var(--warm)}
+.nudge b{color:#fff}
+.btn.ghost-dark{background:transparent;color:var(--warm);box-shadow:inset 0 0 0 1.5px var(--mute)}
+.btn.ghost-dark:hover{background:rgba(243,236,212,.1)}
+.nudge :focus-visible{outline-color:var(--warm)}

@@ -38,6 +38,9 @@
         impBlock = '<div class="msg" role="status"><p>This code holds <b>' + res.done.length + ' topics done</b> and ' + res.parked.length + ' set aside. This device has ' + st.done.size + ' done and ' + st.parked.size + ' set aside.</p>' +
           '<p style="margin-top:6px">Loading it replaces the progress on this device. You can undo that right after.</p><div class="row-actions" style="margin-top:10px"><button class="btn sm" data-act="import-apply">Replace progress here</button><button class="btn ghost sm" data-act="import-cancel">Cancel</button></div></div>';
       }
+      var storageText = ctx.persisted ? 'Protected. This browser has promised to keep it.'
+        : ctx.iosSafari && !ctx.standalone ? 'Not protected. On iPhone tap Share, then Add to Home Screen.'
+        : ctx.standalone ? 'The browser has not promised to keep it, so keep a backup.' : 'Not protected yet. Installing the app asks the browser to keep it.';
       var log = store.log.slice(-12).reverse();
       var recent = log.length ? '<ul class="recent">' + log.map(function (e) {
         return '<li class="' + (e.rev ? 'rev' : '') + '"><span class="what">' + esc(label(e)) + '</span>' +
@@ -54,8 +57,10 @@
         '<div class="more-grid"><div>' +
         '<h2 style="margin-top:20px">Undo and recent changes</h2><p class="lede">Pressed something by mistake? Undo it here, or reopen the topic from Courses.</p>' +
         '<div class="row-actions" style="margin:12px 0 4px"><button class="btn sm" data-act="undo"' + (store.canUndo() ? '' : ' disabled') + '>' + u.icon('undo') + 'Undo last</button><button class="btn ghost sm" data-act="redo"' + (store.canRedo() ? '' : ' disabled') + '>' + u.icon('redo') + 'Redo</button></div>' + recent +
-        '<h2>Your progress code</h2><p class="lede">Progress stays on this device. To move it to another device, copy this code or link and open it there. No account, no server.</p>' +
-        '<p class="code" id="code-text" style="margin-top:12px">' + esc(code) + '</p><div class="row-actions" style="margin-top:10px"><button class="btn sm" data-act="copy" data-what="code">' + u.icon('copy') + 'Copy code</button><button class="btn ghost sm" data-act="copy" data-what="link">' + u.icon('link') + 'Copy link</button></div>' +
+        '<h2>Keep your progress safe</h2><p class="lede">Your ticks live in this browser only, and browsers sometimes clear that: iPhone Safari after about a week unused, any phone that runs very low on space. A backup code fixes all of it, and moves your ticks to another device.</p>' +
+        '<ul class="plain-list"><li><b>Storage:</b> ' + esc(storageText) + '</li><li><b>Last backup:</b> ' + esc(ctx.backupInfo()) + '</li></ul>' +
+        '<p class="code" id="code-text" style="margin-top:12px">' + esc(code) + '</p><div class="row-actions" style="margin-top:10px">' + (ctx.canShare ? '<button class="btn sm" data-act="share">' + u.icon('link') + 'Send to myself</button>' : '') + '<button class="btn' + (ctx.canShare ? ' ghost' : '') + ' sm" data-act="copy" data-what="code">' + u.icon('copy') + 'Copy code</button><button class="btn ghost sm" data-act="copy" data-what="link">' + u.icon('link') + 'Copy link</button></div>' +
+        '<p class="hint">Paste it into Telegram Saved Messages or a note. To restore, open the link, or paste the code under Load progress below.</p>' +
         '<h2>Load progress from a code</h2><label class="hint" for="code-in" style="display:block;margin:0 0 6px">Paste the code from your other device.</label><textarea class="code" id="code-in" rows="3" spellcheck="false" autocapitalize="characters" autocomplete="off" placeholder="FE1-XXXX-XXXX-...">' + esc(imp.text) + '</textarea>' +
         '<div class="row-actions" style="margin-top:10px"><button class="btn sm" data-act="import-check">Check code</button></div>' + impBlock +
         '<h2>Start again</h2><p class="lede">Clear everything you have ticked or set aside on this device.</p>' + resetBlock + '</div><div>' +

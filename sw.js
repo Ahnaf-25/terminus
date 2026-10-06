@@ -1,7 +1,7 @@
 /* Terminus service worker.
    Precaches the whole app so it opens with no network. Files are served from the cache first and refreshed in the
    background; a new version (new cache name) replaces the old one the next time the app is opened online. */
-const CACHE = 'fe-ff336339ab';
+const CACHE = 'fe-5f27b35ae3';
 const ASSETS = [
   "./",
   "css/app.css",

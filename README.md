@@ -7,6 +7,7 @@ The last stop is the finals. A railway-ticket study plan for the BUET L4T1 term 
 - **Today**: the next two topics as tear-off stubs, your pace to the next checkpoint, and the exam board.
 - **Plan**: the whole calendar with checkpoints, exam windows and exams.
 - **Courses**: every topic with the work to do (study, solve, practise, note) and each past question that touched it.
+- **Questions**: search every past question by a word, a topic or a number, and see it exactly as printed in the paper, with the figures it refers to.
 - **Cut order**: if you fall behind, which topics to set aside, in order. Core topics are never offered.
 - **Undo** after every change, and a progress code to move your ticks between phone and laptop.
 
@@ -18,4 +19,4 @@ There is no account and no server. Your ticks are saved in your own browser only
 
 ## Credits
 
-Fonts: Anek Latin and Martian Mono, under the SIL Open Font License 1.1 (see `fonts/OFL-*.txt`). Past-question summaries are short paraphrases written for this plan, not the exam wording.
+Fonts: Anek Latin and Martian Mono, under the SIL Open Font License 1.1 (see `fonts/OFL-*.txt`). Past-question summaries are short paraphrases written for this plan. The question images are cropped from scanned copies of past BUET exam papers, included so each question can be read inside the app; search engines are asked not to index them.

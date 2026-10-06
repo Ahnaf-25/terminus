@@ -150,6 +150,58 @@
       return cells;
     }
 
+    /* ---------- past questions ---------- */
+    var Q = PLAN.questions || [], papers = PLAN.papers || {}, qByKey = {}, paperRank = {}, qIndex = null;
+    Object.keys(papers).forEach(function (p, i) { paperRank[p] = i; });
+    Q.forEach(function (q) { qByKey[q.k] = q; });
+    function stripSub(s) { return String(s == null ? '' : s).replace(/_\{([^}]*)\}/g, '$1'); }
+    function qNum(l) { var m = String(l).match(/^(\d+)/); return m ? +m[1] : 99; }
+    function qOrder(a, b) { return (qNum(a) - qNum(b)) || (a < b ? -1 : a > b ? 1 : 0); }
+    function qCourse(q) { return papers[q.p].c; }
+    function qIndexBuild() {
+      qIndex = Q.map(function (q) {
+        var p = papers[q.p], names = q.f.concat(q.w).map(function (id) { return stripSub(byId[id].n + ' ' + byId[id].cv); }).join(' ');
+        return { sum: stripSub(q.t).toLowerCase(), top: names.toLowerCase(),
+                 meta: [p.l, p.code, 'q' + q.q, q.q, (q.m || '') + ' marks', 'page ' + q.pg].join(' ').toLowerCase() };
+      });
+    }
+    var LABEL = /^q?(\d{1,2})([a-z]?)(?:\(?([ivx]+)\)?)?$/;
+    /* Every word typed must match something about the question: its summary, its topics, its paper, its number.
+       A word that looks like a question number (5, 5b, q5b, 7a(iv)) also matches questions whose number starts with it. */
+    function searchQuestions(o) {
+      if (!qIndex) qIndexBuild();
+      var toks = String(o.q || '').toLowerCase().replace(/[“”"']/g, '').split(/[\s,;]+/).filter(Boolean), res = [];
+      for (var i = 0; i < Q.length; i++) {
+        var q = Q[i], ix = qIndex[i], score = 0, ok = true, t;
+        if (o.p && q.p !== o.p) continue;
+        if (o.c && qCourse(q) !== o.c) continue;
+        for (t = 0; t < toks.length && ok; t++) {
+          var tok = toks[t], hit = false, lm = tok.match(LABEL), ql = q.q.toLowerCase();
+          if (lm) { var pre = lm[1] + lm[2] + (lm[3] || ''); if (ql.indexOf(pre) === 0) { hit = true; score += ql === pre ? 6 : 3; } }
+          if (ix.sum.indexOf(tok) >= 0) { hit = true; score += 2; }
+          if (ix.top.indexOf(tok) >= 0) { hit = true; score += 1; }
+          if (ix.meta.indexOf(tok) >= 0) { hit = true; score += 1; }
+          ok = hit;
+        }
+        if (ok) res.push({ q: q, s: score });
+      }
+      res.sort(function (a, b) { return (b.s - a.s) || (paperRank[a.q.p] - paperRank[b.q.p]) || qOrder(a.q.q, b.q.q); });
+      return res.map(function (r) { return r.q; });
+    }
+    function papersOfCourse(c) { return Object.keys(papers).filter(function (p) { return papers[p].c === c; }); }
+    function paperOfPage(c, pg) {
+      var ids = papersOfCourse(c);
+      for (var i = 0; i < ids.length; i++) { var pp = papers[ids[i]].pp; if (pp && pg >= pp[0] && pg <= pp[1]) return ids[i]; }
+      return null;
+    }
+    function questionsOnPage(c, pg) {
+      return Q.filter(function (q) { return qCourse(q) === c && q.pg === pg; }).sort(function (a, b) { return (a.b ? a.b[0] : 0) - (b.b ? b.b[0] : 0) || qOrder(a.q, b.q); });
+    }
+    function pageCount(c) { return PLAN.pr && PLAN.pr[c] ? PLAN.pr[c].length - 1 : 0; }
+    function pageRatio(c, pg) { return PLAN.pr && PLAN.pr[c] && PLAN.pr[c][pg] || 1.41; }
+    function pageUrl(c, pg) { return 'papers/' + c + '/' + core_pad(pg) + '.webp'; }
+    function core_pad(n) { return (n < 10 ? '0' : '') + n; }
+
     /* ---------- route line (Today): where the days of the plan sit ---------- */
     function stations() {
       var out = [];
@@ -164,6 +216,8 @@
       WD: WD, WDL: WDL, MON: MON, MONL: MONL,
       pts: pts, sum: sum, isOpen: isOpen, target: target, nextTopics: nextTopics, courseTopics: courseTopics, courseTotals: courseTotals, overall: overall,
       cutOrder: cutOrder, coreOpen: coreOpen, overload: overload, cutPrefix: cutPrefix,
+      questions: Q, qByKey: qByKey, searchQuestions: searchQuestions, papersOfCourse: papersOfCourse, paperOfPage: paperOfPage, questionsOnPage: questionsOnPage,
+      pageCount: pageCount, pageRatio: pageRatio, pageUrl: pageUrl, qCourse: qCourse, qOrder: qOrder,
       dayInfo: dayInfo, windowFor: windowFor, nextExam: nextExam, stage: stage, monthGrid: monthGrid, stations: stations
     };
   }

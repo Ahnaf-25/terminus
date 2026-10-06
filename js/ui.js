@@ -17,6 +17,7 @@
     next: '<path d="M9 5l7 7-7 7"/>',
     copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>',
     link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+    questions: '<circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
     install: '<path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/>'
   };
@@ -46,8 +47,8 @@
       var p = P.papers[pid], l = p ? p.l : pid;
       return t && p && p.c !== t.c && !(t.c === '405' && p.c === '405') ? l + ' (' + codeShort(p.c) + ')' : l;
     }
-    function firmQ(t) { return (t.q || []).filter(function (q) { return q.length < 6; }); }
-    function weakQ(t) { return (t.q || []).filter(function (q) { return q.length >= 6; }); }
+    function firmQ(t) { return (t.q || []).filter(function (q) { return !q[2]; }); }
+    function weakQ(t) { return (t.q || []).filter(function (q) { return !!q[2]; }); }
 
     /* One line about the questions: the newest two, then a count. */
     function practiseLine(t) {
@@ -58,6 +59,17 @@
       var shown = out.slice(0, 2).join(', ');
       var more = out.length - 2;
       return (firm.length ? 'Latest: ' : 'Related only: ') + shown + (more > 0 ? ' and ' + more + ' more' : '');
+    }
+    /* Like practiseLine, but the question numbers are links that open the question itself. */
+    function practiseHtml(t) {
+      var firm = firmQ(t), weak = weakQ(t);
+      if (!firm.length && !weak.length) return esc('No past question points here directly. Read it for understanding.');
+      var src = firm.length ? firm : weak, seen = {}, out = [];
+      src.forEach(function (q) { var k = q[0] + ' ' + q[1]; if (!seen[k]) { seen[k] = 1; out.push(q); } });
+      var links = out.slice(0, 2).map(function (q) {
+        return '<a class="lnk" href="#/q/' + encodeURIComponent(q[0]) + '/' + encodeURIComponent(q[1]) + '">' + esc(paperLabel(q[0], t) + ' Q' + q[1]) + '</a>';
+      }), more = out.length - 2;
+      return (firm.length ? 'Latest: ' : 'Related only: ') + links.join(', ') + (more > 0 ? ' and <a class="lnk" href="#/topic/' + t.id + '/questions">' + more + ' more</a>' : '');
     }
     function solveLine(t) {
       if (t.nm) return t.nm;
@@ -97,7 +109,7 @@
       return (core.iso(d) === today ? 'today ' : core.fmtShort(core.iso(d)) + ', ') + t;
     }
     return { esc: esc, rich: rich, plain: plain, icon: icon, course: course, codeShort: codeShort, trackWord: trackWord, ptsWord: ptsWord, freqWord: freqWord,
-             paperLabel: paperLabel, firmQ: firmQ, weakQ: weakQ, practiseLine: practiseLine, solveLine: solveLine, studyLine: studyLine, state: state,
+             paperLabel: paperLabel, firmQ: firmQ, weakQ: weakQ, practiseLine: practiseLine, practiseHtml: practiseHtml, solveLine: solveLine, studyLine: studyLine, state: state,
              punch: punch, holes: holes, band: band, chipTag: chipTag, courseChip: courseChip, topicLine: topicLine, when: when, TAGW: TAGW, TAGHELP: TAGHELP };
   }
 

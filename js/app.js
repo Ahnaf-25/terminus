@@ -6,7 +6,7 @@
   var params = new URLSearchParams(root.location.search), override = params.get('today');
   var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion:reduce)').matches;
 
-  var ctx = { preview: !!(override && /^\d{4}-\d{2}-\d{2}$/.test(override)), flipped: null, imp: null, resetAsk: false, cutAmount: null, canInstall: false, deferredPrompt: null };
+  var ctx = { preview: !!(override && /^\d{4}-\d{2}-\d{2}$/.test(override)), flipped: null, imp: null, resetAsk: false, cutAmount: null, canInstall: false, deferredPrompt: null, qf: { q: '', c: '', p: '', n: 20 }, scrollTo: null };
   ctx.today = function () { return ctx.preview ? override : core.iso(new Date()); };
   ctx.baseUrl = function () { return root.location.origin === 'null' || root.location.protocol === 'file:' ? root.location.href.split('#')[0].split('?')[0] : root.location.origin + root.location.pathname; };
   ctx.offlineText = function () {
@@ -16,7 +16,7 @@
   };
 
   var V = {};
-  FE.parts.forEach(function (p) { var o = p({ core: core, store: store, u: u, ctx: ctx }); Object.keys(o).forEach(function (k) { V[k] = o[k]; }); });
+  FE.parts.forEach(function (p) { var o = p({ core: core, store: store, u: u, ctx: ctx, V: V }); Object.keys(o).forEach(function (k) { V[k] = o[k]; }); });
 
   var $ = function (id) { return doc.getElementById(id); };
   var main = $('view'), toastEl = $('toast'), cur = { name: 'today', tab: 'today' }, toastTimer = null;
@@ -38,12 +38,14 @@
   })();
 
   /* ---------- navigation ---------- */
-  var TABS = [['today', 'Today', '#/'], ['plan', 'Plan', '#/plan'], ['courses', 'Courses', '#/courses'], ['cut', 'Cut order', '#/cut'], ['more', 'More', '#/more']];
-  $('nav').innerHTML = TABS.map(function (t) { return '<a href="' + t[2] + '" data-tab="' + t[0] + '">' + FE.ui.icon(t[0]) + '<span>' + t[1] + '</span></a>'; }).join('');
+  var TABS = [['today', 'Today', '#/', 'Today'], ['plan', 'Plan', '#/plan', 'Plan'], ['courses', 'Courses', '#/courses', 'Courses'], ['questions', 'Questions', '#/questions', 'Questions'], ['cut', 'Cut', '#/cut', 'Cut order'], ['more', 'More', '#/more', 'More']];
+  $('nav').innerHTML = TABS.map(function (t) { return '<a href="' + t[2] + '" data-tab="' + t[0] + '" aria-label="' + t[3] + '">' + FE.ui.icon(t[0]) + '<span>' + t[1] + '</span></a>'; }).join('');
 
   function parse() {
-    var h = root.location.hash.replace(/^#\/?/, ''), seg = h.split('/');
-    return { name: seg[0] || 'today', arg: decodeURIComponent(seg.slice(1).join('/')) };
+    var h = root.location.hash.replace(/^#\/?/, ''), qi = h.indexOf('?'), qs = qi >= 0 ? h.slice(qi + 1) : '';
+    if (qi >= 0) h = h.slice(0, qi);
+    var seg = h.split('/');
+    return { name: seg[0] || 'today', arg: decodeURIComponent(seg.slice(1).join('/')), params: new URLSearchParams(qs) };
   }
   function build(r) {
     switch (r.name) {
@@ -51,6 +53,9 @@
       case 'day': return [V.day(r.arg), 'plan'];
       case 'courses': return [V.courses(r.arg), 'courses'];
       case 'topic': return [V.topic(r.arg), 'courses'];
+      case 'questions': ctx.qf = V.qfFrom(r.params); return [V.questions(r.arg, r.params), 'questions'];
+      case 'q': return [V.question(r.arg), 'questions'];
+      case 'page': return [V.page(r.arg, r.params), 'questions'];
       case 'cut': return [V.cut(r.arg), 'cut'];
       case 'more': return [V.more(), 'more'];
       default: return [V.today(), 'today'];
@@ -81,7 +86,10 @@
     else {
       root.scrollTo(0, 0);
       var h1 = main.querySelector('h1'); if (h1) { h1.setAttribute('tabindex', '-1'); h1.focus({ preventScroll: true }); }
+      if (r.name === 'page') { var hl = main.querySelector('.hl.on'); if (hl) hl.scrollIntoView({ block: 'center' }); }
+      if (ctx.scrollTo) { var st = $(ctx.scrollTo); ctx.scrollTo = null; if (st) st.scrollIntoView(); }
     }
+    if (r.name === 'more') refreshPapersSaved();
   }
   function route() {
     if (ctx.busy) { ctx.pendingRoute = true; return; }
@@ -183,6 +191,63 @@
     });
   }
 
+  /* ---------- questions: images, zoom, offline papers ---------- */
+  function toggleShot(btn) {
+    var card = btn.closest('.qcard'), body = card && card.querySelector('.qbody'); if (!body) return;
+    if (body.hidden) {
+      if (!body.innerHTML.trim()) body.innerHTML = V.qshot(btn.getAttribute('data-key'));
+      body.hidden = false; btn.setAttribute('aria-expanded', 'true'); btn.textContent = 'Hide the question'; btn.classList.add('ghost');
+    } else { body.hidden = true; btn.setAttribute('aria-expanded', 'false'); btn.textContent = 'Show the exact question'; btn.classList.remove('ghost'); }
+  }
+  function zoomTo(btn) {
+    var box = $('pagebox'); if (!box) return;
+    box.style.setProperty('--z', btn.getAttribute('data-z'));
+    [].forEach.call(btn.parentNode.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
+    var hl = box.querySelector('.hl.on'); if (hl) hl.scrollIntoView({ block: 'center', inline: 'start' });
+  }
+  var PAPERS_CACHE = 'fe-papers-' + PLAN.meta.papers, pageUrls = [];
+  PLAN.courses.forEach(function (c) { for (var i = 1; i <= core.pageCount(c.id); i++) pageUrls.push(core.pageUrl(c.id, i)); });
+  ctx.papersSaved = null; ctx.papersBusy = null;
+  ctx.canSavePapers = function () { return root.location.protocol !== 'file:' && !!root.caches && !!root.navigator.serviceWorker && !!root.navigator.serviceWorker.controller && !ctx.papersBusy; };
+  ctx.papersText = function () {
+    if (root.location.protocol === 'file:' || !root.caches) return 'Available from the web link, not from a file.';
+    if (ctx.papersBusy) return 'Saving... ' + ctx.papersBusy.done + ' of ' + pageUrls.length + ' pages';
+    if (ctx.papersSaved == null) return 'Checking...';
+    return ctx.papersSaved + ' of ' + pageUrls.length + ' pages saved on this device.';
+  };
+  function showPapersStatus() {
+    var el = $('papers-status'); if (el) el.textContent = ctx.papersText();
+    var b = doc.querySelector('[data-act=papers-save]'); if (b) b.disabled = !ctx.canSavePapers();
+  }
+  function refreshPapersSaved() {
+    if (!root.caches) return;
+    root.caches.open(PAPERS_CACHE).then(function (c) { return c.keys(); }).then(function (k) { ctx.papersSaved = k.length; showPapersStatus(); }, function () { /* no cache here */ });
+  }
+  function savePapers() {
+    if (!ctx.canSavePapers()) return;
+    var i = 0, st = ctx.papersBusy = { done: 0 }; showPapersStatus();
+    function worker() {
+      if (i >= pageUrls.length) return Promise.resolve();
+      var url = pageUrls[i++];
+      return root.fetch(url).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; }).then(function () { st.done++; showPapersStatus(); return worker(); });
+    }
+    Promise.all([worker(), worker(), worker(), worker()]).then(function () {
+      ctx.papersBusy = null;
+      var tries = 0;
+      (function recount() {      // the browser finishes writing the last pages a moment after the last download
+        root.caches.open(PAPERS_CACHE).then(function (c) { return c.keys(); }).then(function (k) {
+          ctx.papersSaved = k.length; showPapersStatus();
+          if (k.length < pageUrls.length && ++tries < 8) setTimeout(recount, 600);
+          else toast(k.length >= pageUrls.length ? 'Papers saved. Every question now opens without internet.' : 'Some pages could not be saved. Try again with a better connection.');
+        }, function () { /* no cache here */ });
+      })();
+    });
+  }
+  doc.addEventListener('error', function (ev) {
+    var t = ev.target, box = t && t.tagName === 'IMG' && t.closest ? t.closest('.crop, .pageimg') : null; if (!box) return;
+    box.style.aspectRatio = 'auto'; box.innerHTML = '<p class="imgfail">This page is not saved on this device yet. Connect once to see it, or open More and choose Save all papers for offline.</p>';
+  }, true);
+
   /* ---------- clicks ---------- */
   function ids(el) { return (el.getAttribute('data-ids') || '').split(',').filter(Boolean); }
   function cutAmount() { return ctx.cutAmount == null ? core.overload(core.target(store.state, ctx.today())) : ctx.cutAmount; }
@@ -215,11 +280,25 @@
       case 'share': case 'backup-now': backup(); break;
       case 'nudge-later': store.setPref('snoozeUntil', Date.now() + 7 * 864e5); rerender(); break;
       case 'nudge-ios': store.setPref('iosDismissed', 1); rerender(); break;
+      case 'qshow': toggleShot(el); break;
+      case 'qmore': ctx.qf.n += V.qPAGE; V.qfRefresh(); break;
+      case 'qcourse': ctx.qf.c = el.getAttribute('data-c'); ctx.qf.p = ''; ctx.qf.n = V.qPAGE; V.qfRefresh(); break;
+      case 'zoom': zoomTo(el); break;
+      case 'cropzoom': var fig = el.closest('figure'), on = !fig.classList.contains('zoomed'); fig.classList.toggle('zoomed', on); el.setAttribute('aria-pressed', String(on)); el.textContent = on ? 'Zoom out' : 'Zoom in'; break;
+      case 'copy-qlink': var kk = el.getAttribute('data-key').split('|'); copy(ctx.baseUrl() + '#/q/' + encodeURIComponent(kk[0]) + '/' + encodeURIComponent(kk.slice(1).join('|')), function (ok) { toast(ok ? 'Link copied. Anyone with the app can open it.' : 'Could not copy the link.'); }); break;
+      case 'papers-save': savePapers(); break;
       case 'toast-close': hideToast(); break;
       case 'reload': root.location.reload(); break;
     }
   });
-  doc.addEventListener('input', function (ev) { if (ev.target && ev.target.id === 'code-in') ctx.imp = { text: ev.target.value, res: null }; });
+  var qTimer = null;
+  doc.addEventListener('input', function (ev) {
+    var id = ev.target && ev.target.id;
+    if (id === 'code-in') ctx.imp = { text: ev.target.value, res: null };
+    else if (id === 'qs') { clearTimeout(qTimer); qTimer = setTimeout(function () { ctx.qf.q = ev.target.value.trim(); ctx.qf.n = V.qPAGE; V.qfRefresh(); }, 140); }
+  });
+  doc.addEventListener('change', function (ev) { if (ev.target && ev.target.id === 'qpaper') { ctx.qf.p = ev.target.value; ctx.qf.n = V.qPAGE; V.qfRefresh(); } });
+  doc.addEventListener('submit', function (ev) { if (ev.target && ev.target.hasAttribute && ev.target.hasAttribute('data-qform')) { ev.preventDefault(); var inp = $('qs'); if (inp) inp.blur(); } });
   doc.addEventListener('keydown', function (ev) {
     var tag = ev.target && ev.target.tagName; if (tag === 'TEXTAREA' || tag === 'INPUT') return;
     if ((ev.ctrlKey || ev.metaKey) && !ev.altKey) {
@@ -244,6 +323,7 @@
     });
   }
   askPersist();
+  refreshPapersSaved();
 
   FE.tear.setTone(store.getPref('tone', 'soft'), true);
   FE.app = { core: core, store: store, ctx: ctx, route: route, render: render, V: V, toast: toast };

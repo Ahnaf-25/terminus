@@ -59,7 +59,9 @@
       (t.q || []).forEach(function (q) { if (!cur || cur.id !== q[0]) { cur = { id: q[0], items: [] }; out.push(cur); } cur.items.push(q); });
       return out;
     }
-    function topic(id) {
+    function topic(arg) {
+      var seg = String(arg).split('/'), id = seg[0];
+      if (seg[1] === 'questions') ctx.scrollTo = 'topic-questions';
       var t = core.byId[id];
       if (!t) return { html: '<section class="sheet">' + u.band('Topic', 'Not found', true) + '<div class="body"><a class="back" href="#/courses">' + u.icon('back') + 'Courses</a><h1>Topic not found</h1><p class="lede">There is no topic called ' + esc(id) + '.</p></div></section>', title: 'Topic' };
       var c = core.courseById[t.c], s = u.state(id), sibs = core.courseTopics(t.c), i = sibs.indexOf(t);
@@ -77,9 +79,7 @@
       var papers = grouped(t).map(function (g) {
         var p = P.papers[g.id];
         return '<div class="paper"><h3>' + esc(p.l) + '<span>' + esc(p.code) + '</span></h3>' + g.items.map(function (q) {
-          var weak = q.length >= 6;
-          return '<div class="q' + (weak ? ' weak' : '') + '"><span class="qn">Q' + esc(q[1]) + '</span><span class="txt">' + rich(q[4]) + '</span><span class="qm">' +
-            [q[3] ? q[3] + ' marks' : '', q[2] ? 'page ' + q[2] + ' of the PDF' : '', weak ? 'partly related' : ''].filter(Boolean).join(' · ') + '</span></div>';
+          var qq = core.qByKey[q[0] + '|' + q[1]]; return qq ? env.V.qcard(qq, false, id) : '';
         }).join('') + '</div>';
       }).join('');
       var html = '<section class="sheet" aria-labelledby="h-topic">' + u.band('Topic', id, true) + '<div class="body"><a class="back" href="#/courses/' + t.c + '">' + u.icon('back') + esc(c.code) + '</a>' +
@@ -89,8 +89,8 @@
         '<p class="hint">' + esc(u.TAGHELP[t.g]) + (t.tn ? ' ' + rich(t.tn) + '.' : '') + '</p>' +
         '<div class="state-box" id="state-box">' + stateBox + '</div>' +
         '<div class="topic-cols"><section><h2>The work</h2><ol class="steps">' + steps + '</ol></section>' +
-        '<section><h2>Past questions</h2>' + (papers || '<p class="lede">No past question points here directly. Read it for understanding.</p>') +
-        (papers ? '<p class="hint">Summaries are short paraphrases, not the exam wording. Open the paper itself for the full question.</p>' : '') + '</section></div>' +
+        '<section id="topic-questions"><h2>Past questions</h2>' + (papers || '<p class="lede">No past question points here directly. Read it for understanding.</p>') +
+        (papers ? '<p class="hint">Each summary is a short paraphrase. Press Show the exact question to see the question as printed in the paper.</p>' : '') + '</section></div>' +
         '<div class="pager">' + (prev ? '<a class="btn ghost sm" href="#/topic/' + prev.id + '">' + u.icon('back') + esc(prev.id) + '</a>' : '<span></span>') +
         (next ? '<a class="btn ghost sm" href="#/topic/' + next.id + '">' + esc(next.id) + u.icon('next') + '</a>' : '<span></span>') + '</div></div></section>';
       return { html: html, title: u.plain(t.n) };

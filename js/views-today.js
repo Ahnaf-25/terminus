@@ -95,7 +95,7 @@
         '<p class="covers">' + rich(t.cv) + '</p>' +
         '<p class="meta">' + esc(u.ptsWord(t)) + ' · ' + u.trackWord(t) + ' · ' + esc(u.freqWord(t)) + '</p>' +
         '<dl class="work">' + (study ? '<div><dt>Study</dt><dd>' + rich(study) + '</dd></div>' : '') + (solve ? '<div><dt>Solve</dt><dd>' + rich(solve) + '</dd></div>' : '') +
-          '<div><dt>Practise</dt><dd>' + rich(u.practiseLine(t)) + '</dd></div></dl>' +
+          '<div><dt>Practise</dt><dd>' + u.practiseHtml(t) + '</dd></div></dl>' +
         (t.pd ? '<p class="notice">' + esc(t.pd) + '</p>' : '') +
         '<div class="act"><button class="btn" data-act="done" data-id="' + id + '" aria-label="Mark done: ' + esc(u.plain(t.n)) + '">Done</button><a class="lnk" href="#/topic/' + id + '">Details and questions</a></div>' +
         (first ? '<p class="stub-note">Done means: studied, past questions solved, one-page note written.</p>' : '') + '</li>';

@@ -170,6 +170,26 @@
 
     function setPref(k, v) { prefs[k] = v; write(PREFS, JSON.stringify(prefs)); }
 
+    /* ---------- practice record: how you scored against the model answers ----------
+       Saved like a preference: it does not notify subscribers, so ticking a marking point never redraws the page.
+       { "paper|q": [score, marks, pointsHash, [ticked point numbers]] } */
+    var PRACT = 'fe.practice', practice = {};
+    try { practice = JSON.parse(read(PRACT) || '{}') || {}; } catch (e) { practice = {}; }
+    function savePractice() { write(PRACT, JSON.stringify(practice)); }
+    function getPractice(key) { var p = practice[key]; return p ? { s: p[0], m: p[1], ph: p[2], t: p[3] || [] } : null; }
+    function setPractice(key, ticked, score, marks, ph) {
+      if (!ticked.length) delete practice[key];
+      else practice[key] = [Math.round(score * 10) / 10, marks, ph, ticked.slice()];
+      savePractice();
+    }
+    function clearPractice() { practice = {}; savePractice(); }
+    function practiceSummary(keys) {
+      var n = 0, sum = 0;
+      keys.forEach(function (k) { var p = practice[k]; if (p && p[1]) { n++; sum += p[0] / p[1]; } });
+      return { n: n, avg: n ? sum / n : 0 };
+    }
+    function practiceAll() { return Object.keys(practice); }
+
     return {
       state: st, get log() { return log; }, get persistOk() { return persistOk; },
       isDone: function (i) { return st.done.has(i); }, isParked: function (i) { return st.parked.has(i); },
@@ -180,6 +200,7 @@
       lastApplied: lastApplied, find: find,
       exportCode: exportCode, parseCode: parseCode,
       getPref: function (k, d) { return prefs[k] === undefined ? d : prefs[k]; }, setPref: setPref,
+      getPractice: getPractice, setPractice: setPractice, clearPractice: clearPractice, practiceSummary: practiceSummary, practiceAll: practiceAll,
       subscribe: function (f) { subs.push(f); return function () { subs = subs.filter(function (x) { return x !== f; }); }; },
       planHash: planHash
     };

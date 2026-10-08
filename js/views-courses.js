@@ -89,7 +89,7 @@
         '<p class="hint">' + esc(u.TAGHELP[t.g]) + (t.tn ? ' ' + rich(t.tn) + '.' : '') + '</p>' +
         '<div class="state-box" id="state-box">' + stateBox + '</div>' +
         '<div class="topic-cols"><section><h2>The work</h2><ol class="steps">' + steps + '</ol></section>' +
-        '<section id="topic-questions"><h2>Past questions</h2>' + (papers || '<p class="lede">No past question points here directly. Read it for understanding.</p>') +
+        '<section id="topic-questions"><h2>Past questions</h2>' + (function () { var ks = (t.q || []).map(function (x) { return x[0] + '|' + x[1]; }); var tx = env.V.ansSummaryText ? env.V.ansSummaryText(ks) : ''; return tx ? '<p class="hint" id="practice-sum" data-keys="' + esc(ks.join(',')) + '">' + esc(tx) + '</p>' : ''; })() + (papers || '<p class="lede">No past question points here directly. Read it for understanding.</p>') +
         (papers ? '<p class="hint">Each summary is a short paraphrase. Press Show the exact question to see the question as printed in the paper.</p>' : '') + '</section></div>' +
         '<div class="pager">' + (prev ? '<a class="btn ghost sm" href="#/topic/' + prev.id + '">' + u.icon('back') + esc(prev.id) + '</a>' : '<span></span>') +
         (next ? '<a class="btn ghost sm" href="#/topic/' + next.id + '">' + esc(next.id) + u.icon('next') + '</a>' : '<span></span>') + '</div></div></section>';

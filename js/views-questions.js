@@ -43,16 +43,16 @@
 
     function card(q, open, skip) {
       var p = P.papers[q.p];
-      return '<article class="qcard" id="' + qid(q) + '" data-key="' + esc(q.k) + '"><header><span class="qn">Q' + esc(q.q) + '</span><span class="qmeta">' + esc(p.l) + ' · ' + esc(p.code) + (q.m ? ' · ' + q.m + ' marks' : '') + '</span></header>' +
+      return '<article class="qcard" id="' + qid(q) + '" data-key="' + esc(q.k) + '"><header><span class="qn">Q' + esc(q.q) + '</span><span class="qmeta">' + esc(p.l) + ' · ' + esc(p.code) + (q.m ? ' · ' + q.m + ' marks' : '') + '</span>' + (q.a ? env.V.ansChip(q.k) : '') + '</header>' +
         '<p class="qtext">' + rich(q.t) + '</p><div class="chips">' + topicChips(q, skip) + '</div>' +
-        '<div class="qact"><button class="btn sm' + (open ? ' ghost' : '') + '" data-act="qshow" data-key="' + esc(q.k) + '" aria-expanded="' + !!open + '">' + (open ? 'Hide the question' : 'Show the exact question') + '</button>' +
-        '<a class="lnk" href="' + qhref(q) + '">Open</a></div><div class="qbody"' + (open ? '' : ' hidden') + '>' + (open ? shot(q) : '') + '</div></article>';
+        '<div class="qact"><button class="btn sm' + (open ? ' ghost' : '') + '" data-act="qshow" data-key="' + esc(q.k) + '" aria-expanded="' + !!open + '">' + (open ? 'Hide the question' : 'Show the exact question') + '</button>' + (q.a ? env.V.ansButton(q) : '') +
+        '<a class="lnk" href="' + qhref(q) + '">Open</a></div><div class="qbody"' + (open ? '' : ' hidden') + '>' + (open ? shot(q) : '') + '</div>' + (q.a ? env.V.ansSlot(q) : '') + '</article>';
     }
 
     /* ---------- the finder ---------- */
-    function qfFrom(params) { return { q: (params && params.get('q')) || '', c: (params && params.get('c')) || '', p: (params && params.get('p')) || '', n: PAGE_SIZE }; }
+    function qfFrom(params) { return { q: (params && params.get('q')) || '', c: (params && params.get('c')) || '', p: (params && params.get('p')) || '', pr: (params && params.get('pr')) || '', n: PAGE_SIZE }; }
     function qfQuery(f) {
-      var a = []; if (f.q) a.push('q=' + encodeURIComponent(f.q)); if (f.c) a.push('c=' + encodeURIComponent(f.c)); if (f.p) a.push('p=' + encodeURIComponent(f.p));
+      var a = []; if (f.q) a.push('q=' + encodeURIComponent(f.q)); if (f.c) a.push('c=' + encodeURIComponent(f.c)); if (f.p) a.push('p=' + encodeURIComponent(f.p)); if (f.pr) a.push('pr=' + encodeURIComponent(f.pr));
       return a.length ? '?' + a.join('&') : '';
     }
     function filters(f) {
@@ -65,7 +65,13 @@
           return '<option value="' + esc(id) + '"' + (f.p === id ? ' selected' : '') + '>' + esc(P.papers[id].l + ' (' + P.papers[id].n + ' questions)') + '</option>';
         }).join('') + '</select>';
       }
-      return '<div class="tabs qtabs" role="group" aria-label="Course">' + chips + '</div>' + sel;
+      var prsel = '';
+      if (core.questions.some(function (q) { return q.a; })) {
+        prsel = '<label class="sr" for="qpr">Model answers</label><select id="qpr" class="sel">' + [['', 'All questions'], ['ans', 'With a model answer'], ['none', 'Not practised yet'], ['low', 'Scored below 60%']].map(function (o) {
+          return '<option value="' + o[0] + '"' + (f.pr === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+        }).join('') + '</select>';
+      }
+      return '<div class="tabs qtabs" role="group" aria-label="Course">' + chips + '</div>' + sel + prsel;
     }
     function browse() {
       return P.courses.map(function (c) {
@@ -75,9 +81,17 @@
         }).join('') + '</ul></section>';
       }).join('');
     }
+    function byPractice(list, pr) {
+      if (!pr) return list;
+      return list.filter(function (q) {
+        if (!q.a) return false;
+        var r = env.store.getPractice(q.k);
+        return pr === 'ans' || (pr === 'none' ? !r : !!(r && r.m && r.s / r.m < 0.6));
+      });
+    }
     function results(f) {
-      if (!f.q && !f.c && !f.p) return browse();
-      var list = core.searchQuestions(f), shown = list.slice(0, f.n), auto = list.length > 0 && list.length <= 3;
+      if (!f.q && !f.c && !f.p && !f.pr) return browse();
+      var list = byPractice(core.searchQuestions(f), f.pr), shown = list.slice(0, f.n), auto = list.length > 0 && list.length <= 3;
       var head = '<p class="count" role="status">' + (list.length ? core.plural(list.length, 'question') : 'No question matches.') + (f.p ? ' in ' + esc(P.papers[f.p].l + ' ' + P.papers[f.p].code) : '') + '</p>';
       if (!list.length) return head + '<p class="hint">Try fewer words, a topic name (Jominy, Weibull, NPV), or a question number like 5b. Clear the course filter to search everything.</p>';
       return head + shown.map(function (q) { return card(q, auto); }).join('') + (list.length > shown.length ? '<div class="row-actions" style="margin-top:12px"><button class="btn ghost sm" data-act="qmore">Show ' + Math.min(PAGE_SIZE, list.length - shown.length) + ' more</button></div>' : '');
@@ -102,9 +116,9 @@
       if (!q) return { html: '<section class="sheet">' + u.band('Question', 'Not found', true) + '<div class="body"><a class="back" href="#/questions">' + u.icon('back') + 'Questions</a><h1>Question not found</h1></div></section>', title: 'Question' };
       var c = core.qCourse(q), p = P.papers[q.p];
       var sibs = core.questions.filter(function (x) { return x.p === q.p; }), i = sibs.indexOf(q), prev = sibs[i - 1], next = sibs[i + 1];
-      var html = '<section class="sheet" aria-labelledby="h-q1">' + u.band('Question', p.l + ' ' + p.code, true) + '<div class="body"><a class="back" href="#/questions?c=' + c + '&p=' + encodeURIComponent(q.p) + '">' + u.icon('back') + 'All of ' + esc(p.l + ' ' + p.code) + '</a>' +
-        '<h1 id="h-q1">Question ' + esc(q.q) + '</h1><div class="day-hero">' + u.courseChip(c) + '<span class="chip">' + esc(p.l) + '</span>' + (q.m ? '<span class="chip">' + q.m + ' marks</span>' : '') + '</div>' +
-        '<p class="lede">' + rich(q.t) + '</p><div class="chips" style="margin-top:10px">' + topicChips(q) + '</div>' + shot(q) +
+      var html = '<section class="sheet" aria-labelledby="h-q1">' + u.band('Question', p.l + ' ' + p.code, true) + '<div class="body qpage"><a class="back" href="#/questions?c=' + c + '&p=' + encodeURIComponent(q.p) + '">' + u.icon('back') + 'All of ' + esc(p.l + ' ' + p.code) + '</a>' +
+        '<h1 id="h-q1">Question ' + esc(q.q) + '</h1><div class="day-hero">' + u.courseChip(c) + '<span class="chip">' + esc(p.l) + '</span>' + (q.m ? '<span class="chip">' + q.m + ' marks</span>' : '') + (q.a ? env.V.ansChip(q.k) : '') + '</div>' +
+        '<p class="lede">' + rich(q.t) + '</p><div class="chips" style="margin-top:10px">' + topicChips(q) + '</div>' + shot(q) + (q.a ? '<div class="qact" style="margin-top:14px">' + env.V.ansButton(q) + '</div><p class="hint">Write your own answer first, then check it against the model answer.</p>' + env.V.ansSlot(q, 2) : '') +
         '<div class="row-actions" style="margin-top:14px"><button class="btn ghost sm" data-act="copy-qlink" data-key="' + esc(q.k) + '">' + u.icon('link') + 'Copy link to this question</button></div>' +
         '<div class="pager">' + (prev ? '<a class="btn ghost sm" href="' + qhref(prev) + '">' + u.icon('back') + 'Q' + esc(prev.q) + '</a>' : '<span></span>') + (next ? '<a class="btn ghost sm" href="' + qhref(next) + '">Q' + esc(next.q) + u.icon('next') + '</a>' : '<span></span>') + '</div></div></section>';
       return { html: html, title: 'Q' + q.q + ' ' + p.l };

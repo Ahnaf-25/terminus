@@ -6,7 +6,7 @@
   var params = new URLSearchParams(root.location.search), override = params.get('today');
   var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion:reduce)').matches;
 
-  var ctx = { preview: !!(override && /^\d{4}-\d{2}-\d{2}$/.test(override)), flipped: null, imp: null, resetAsk: false, cutAmount: null, canInstall: false, deferredPrompt: null, qf: { q: '', c: '', p: '', n: 20 }, scrollTo: null };
+  var ctx = { preview: !!(override && /^\d{4}-\d{2}-\d{2}$/.test(override)), flipped: null, imp: null, resetAsk: false, cutAmount: null, canInstall: false, deferredPrompt: null, qf: { q: '', c: '', p: '', pr: '', n: 20 }, scrollTo: null };
   ctx.today = function () { return ctx.preview ? override : core.iso(new Date()); };
   ctx.baseUrl = function () { return root.location.origin === 'null' || root.location.protocol === 'file:' ? root.location.href.split('#')[0].split('?')[0] : root.location.origin + root.location.pathname; };
   ctx.offlineText = function () {
@@ -63,7 +63,7 @@
   }
   function focusKey(el) {
     var a = el && el.closest && el.closest('[data-act]'); if (!a) return null;
-    return ['act', 'id', 'ids', 'eid', 'tone', 'what', 'd'].map(function (k) { return a.getAttribute('data-' + k) || ''; }).join('|');
+    return ['act', 'id', 'ids', 'eid', 'tone', 'what', 'd', 'key'].map(function (k) { return a.getAttribute('data-' + k) || ''; }).join('|');
   }
   function refocus(key) {
     if (!key) return;
@@ -79,6 +79,7 @@
     var v = pair[0];
     main.className = 'view ' + (v.cls || '');
     main.innerHTML = v.html;
+    if (V.ansRestore) V.ansRestore(main);
     doc.title = (r.name === '' || r.name === 'today' ? 'Terminus' : v.title + ' · Terminus');
     cur = { name: r.name, tab: pair[1] };
     Array.prototype.forEach.call($('nav').querySelectorAll('a'), function (a) { if (a.getAttribute('data-tab') === pair[1]) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -100,7 +101,7 @@
       var t = $('code-in'); if (t) t.scrollIntoView({ block: 'center' });
       return;
     }
-    ctx.resetAsk = false; render(false);
+    ctx.resetAsk = false; ctx.openAns = {}; render(false);       // a new page starts with every model answer closed
   }
   function rerender() { if (ctx.busy) { ctx.dirty = true; return; } render(true); ctx.flipped = null; }
 
@@ -205,40 +206,53 @@
     [].forEach.call(btn.parentNode.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
     var hl = box.querySelector('.hl.on'); if (hl) hl.scrollIntoView({ block: 'center', inline: 'start' });
   }
-  var PAPERS_CACHE = 'fe-papers-' + PLAN.meta.papers, pageUrls = [];
+  var PAPERS_CACHE = 'fe-papers-' + PLAN.meta.papers, ANSWERS_CACHE = 'fe-answers', pageUrls = [], ansUrls = V.ansUrls ? V.ansUrls() : [];
   PLAN.courses.forEach(function (c) { for (var i = 1; i <= core.pageCount(c.id); i++) pageUrls.push(core.pageUrl(c.id, i)); });
-  ctx.papersSaved = null; ctx.papersBusy = null;
+  var allUrls = pageUrls.concat(ansUrls), ansNames = ansUrls.map(function (x) { return x.split('/').pop(); });
+  ctx.papersSaved = null; ctx.answersSaved = null; ctx.papersBusy = null; ctx.hasAnswers = ansUrls.length > 0;
   ctx.canSavePapers = function () { return root.location.protocol !== 'file:' && !!root.caches && !!root.navigator.serviceWorker && !!root.navigator.serviceWorker.controller && !ctx.papersBusy; };
   ctx.papersText = function () {
     if (root.location.protocol === 'file:' || !root.caches) return 'Available from the web link, not from a file.';
-    if (ctx.papersBusy) return 'Saving... ' + ctx.papersBusy.done + ' of ' + pageUrls.length + ' pages';
+    if (ctx.papersBusy) return 'Saving... ' + ctx.papersBusy.done + ' of ' + allUrls.length + ' files';
     if (ctx.papersSaved == null) return 'Checking...';
-    return ctx.papersSaved + ' of ' + pageUrls.length + ' pages saved on this device.';
+    return ctx.papersSaved + ' of ' + pageUrls.length + ' pages' + (ctx.hasAnswers ? ' and ' + (ctx.answersSaved || 0) + ' of ' + ansUrls.length + ' answer files' : '') + ' saved on this device.';
   };
   function showPapersStatus() {
     var el = $('papers-status'); if (el) el.textContent = ctx.papersText();
     var b = doc.querySelector('[data-act=papers-save]'); if (b) b.disabled = !ctx.canSavePapers();
   }
+  function countCache(name, names) {
+    return root.caches.open(name).then(function (c) { return c.keys(); }).then(function (ks) {
+      return names ? ks.filter(function (r) { return names.indexOf(r.url.split('/').pop()) >= 0; }).length : ks.length;
+    });
+  }
   function refreshPapersSaved() {
     if (!root.caches) return;
-    root.caches.open(PAPERS_CACHE).then(function (c) { return c.keys(); }).then(function (k) { ctx.papersSaved = k.length; showPapersStatus(); }, function () { /* no cache here */ });
+    Promise.all([countCache(PAPERS_CACHE), ctx.hasAnswers ? countCache(ANSWERS_CACHE, ansNames) : Promise.resolve(0)]).then(function (r) {
+      ctx.papersSaved = r[0]; ctx.answersSaved = r[1]; showPapersStatus();
+    }, function () { /* no cache here */ });
+  }
+  function pruneAnswers() {          // an updated answer has a new file name; drop the saved copies nothing refers to
+    if (!root.caches || !ctx.hasAnswers) return;
+    root.caches.open(ANSWERS_CACHE).then(function (c) { return c.keys().then(function (ks) { ks.forEach(function (r) { if (ansNames.indexOf(r.url.split('/').pop()) < 0) c.delete(r); }); }); }, function () {});
   }
   function savePapers() {
     if (!ctx.canSavePapers()) return;
     var i = 0, st = ctx.papersBusy = { done: 0 }; showPapersStatus();
     function worker() {
-      if (i >= pageUrls.length) return Promise.resolve();
-      var url = pageUrls[i++];
+      if (i >= allUrls.length) return Promise.resolve();
+      var url = allUrls[i++];
       return root.fetch(url).then(function (r) { return r.ok ? r.blob() : null; }).catch(function () { return null; }).then(function () { st.done++; showPapersStatus(); return worker(); });
     }
     Promise.all([worker(), worker(), worker(), worker()]).then(function () {
       ctx.papersBusy = null;
       var tries = 0;
-      (function recount() {      // the browser finishes writing the last pages a moment after the last download
-        root.caches.open(PAPERS_CACHE).then(function (c) { return c.keys(); }).then(function (k) {
-          ctx.papersSaved = k.length; showPapersStatus();
-          if (k.length < pageUrls.length && ++tries < 8) setTimeout(recount, 600);
-          else toast(k.length >= pageUrls.length ? 'Papers saved. Every question now opens without internet.' : 'Some pages could not be saved. Try again with a better connection.');
+      (function recount() {      // the browser finishes writing the last files a moment after the last download
+        Promise.all([countCache(PAPERS_CACHE), ctx.hasAnswers ? countCache(ANSWERS_CACHE, ansNames) : Promise.resolve(0)]).then(function (r) {
+          ctx.papersSaved = r[0]; ctx.answersSaved = r[1]; showPapersStatus();
+          var all = r[0] >= pageUrls.length && (!ctx.hasAnswers || r[1] >= ansUrls.length);
+          if (!all && ++tries < 8) setTimeout(recount, 600);
+          else toast(all ? 'Saved. Every question' + (ctx.hasAnswers ? ' and its model answer' : '') + ' now opens without internet.' : 'Some files could not be saved. Try again with a better connection.');
         }, function () { /* no cache here */ });
       })();
     });
@@ -281,12 +295,17 @@
       case 'nudge-later': store.setPref('snoozeUntil', Date.now() + 7 * 864e5); rerender(); break;
       case 'nudge-ios': store.setPref('iosDismissed', 1); rerender(); break;
       case 'qshow': toggleShot(el); break;
+      case 'ansshow': V.ansToggle(el); break;
+      case 'ansclear': V.ansClear(el); break;
       case 'qmore': ctx.qf.n += V.qPAGE; V.qfRefresh(); break;
       case 'qcourse': ctx.qf.c = el.getAttribute('data-c'); ctx.qf.p = ''; ctx.qf.n = V.qPAGE; V.qfRefresh(); break;
       case 'zoom': zoomTo(el); break;
       case 'cropzoom': var fig = el.closest('figure'), on = !fig.classList.contains('zoomed'); fig.classList.toggle('zoomed', on); el.setAttribute('aria-pressed', String(on)); el.textContent = on ? 'Zoom out' : 'Zoom in'; break;
       case 'copy-qlink': var kk = el.getAttribute('data-key').split('|'); copy(ctx.baseUrl() + '#/q/' + encodeURIComponent(kk[0]) + '/' + encodeURIComponent(kk.slice(1).join('|')), function (ok) { toast(ok ? 'Link copied. Anyone with the app can open it.' : 'Could not copy the link.'); }); break;
       case 'papers-save': savePapers(); break;
+      case 'practice-ask': ctx.practiceAsk = true; rerender(); break;
+      case 'practice-cancel': ctx.practiceAsk = false; rerender(); break;
+      case 'practice-clear': ctx.practiceAsk = false; store.clearPractice(); rerender(); toast('Practice record cleared.'); break;
       case 'toast-close': hideToast(); break;
       case 'reload': root.location.reload(); break;
     }
@@ -297,7 +316,12 @@
     if (id === 'code-in') ctx.imp = { text: ev.target.value, res: null };
     else if (id === 'qs') { clearTimeout(qTimer); qTimer = setTimeout(function () { ctx.qf.q = ev.target.value.trim(); ctx.qf.n = V.qPAGE; V.qfRefresh(); }, 140); }
   });
-  doc.addEventListener('change', function (ev) { if (ev.target && ev.target.id === 'qpaper') { ctx.qf.p = ev.target.value; ctx.qf.n = V.qPAGE; V.qfRefresh(); } });
+  doc.addEventListener('change', function (ev) {
+    var t = ev.target; if (!t) return;
+    if (t.id === 'qpaper') { ctx.qf.p = t.value; ctx.qf.n = V.qPAGE; V.qfRefresh(); }
+    else if (t.id === 'qpr') { ctx.qf.pr = t.value; ctx.qf.n = V.qPAGE; V.qfRefresh(); }
+    else if (t.getAttribute && t.getAttribute('data-act') === 'anspt') V.ansTick(t);
+  });
   doc.addEventListener('submit', function (ev) { if (ev.target && ev.target.hasAttribute && ev.target.hasAttribute('data-qform')) { ev.preventDefault(); var inp = $('qs'); if (inp) inp.blur(); } });
   doc.addEventListener('keydown', function (ev) {
     var tag = ev.target && ev.target.tagName; if (tag === 'TEXTAREA' || tag === 'INPUT') return;
@@ -324,6 +348,7 @@
   }
   askPersist();
   refreshPapersSaved();
+  pruneAnswers();
 
   FE.tear.setTone(store.getPref('tone', 'soft'), true);
   FE.app = { core: core, store: store, ctx: ctx, route: route, render: render, V: V, toast: toast };

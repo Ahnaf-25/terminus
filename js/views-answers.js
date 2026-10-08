@@ -9,7 +9,7 @@
     ctx.ansData = {}; ctx.ansLoading = {}; ctx.openAns = {};
 
     function fileFor(paper) { var p = P.papers[paper]; return p && p.ah ? 'answers/' + paper + '.' + p.ah + '.json' : null; }
-    function answerUrls() { return Object.keys(P.papers).map(fileFor).filter(Boolean); }
+    function answerUrls() { return Object.keys(P.papers).map(fileFor).filter(Boolean).concat((P.meta && P.meta.figs) || []); }   // answer files and their figures
     function n1(x) { return String(Math.round(x * 10) / 10); }
 
     /* ---------- loading ---------- */
@@ -59,7 +59,7 @@
         '<div class="chips"><span class="chip">' + (a.est ? 'about ' : '') + n1(a.m) + ' marks</span><span class="chip">about ' + a.t + ' min</span>' +
         (a.conf && a.conf !== 'high' ? '<span class="chip weak">' + (a.conf === 'low' ? 'Low' : 'Medium') + ' confidence</span>' : '') + (a.chk ? '<span class="chip">Numbers re-checked</span>' : '') + '</div>' +
         '<div class="ans-body">' + a.html + '</div>' +
-        (a.sketch ? '<div class="notice ans-box"><b>Sketch to draw</b><div class="ans-body">' + a.sketch + '</div></div>' : '') +
+        (a.sketch ? '<div class="notice ans-box ans-draw"><b>Diagram to draw</b><div class="ans-body">' + a.sketch + '</div></div>' : '') +
         '<div class="ans-pts"><h' + (lvl + 1) + ' class="ans-sub">Mark yourself</h' + (lvl + 1) + '><p class="hint">Tick what your own answer covered. Be strict: a point counts only if you wrote it.</p><ul class="pts">' + pts + '</ul>' +
         '<div class="score-row"><output class="score" aria-live="polite" data-key="' + esc(q.k) + '">' + scoreText(a, ticked) + '</output><button class="btn ghost sm" data-act="ansclear" data-key="' + esc(q.k) + '">Clear ticks</button></div></div>' +
         (a.watch ? '<div class="ans-box"><b>Watch out</b><div class="ans-body">' + a.watch + '</div></div>' : '') +
@@ -74,6 +74,8 @@
       var a = ctx.openAns[q.k] && entry(q);
       return '<div class="ans" data-key="' + esc(q.k) + '" data-lvl="' + lvl + '"' + (a ? '' : ' hidden') + '>' + (a ? panel(q, a, lvl) : '') + '</div>';
     }
+    function isOpen(q) { return !!(q.a && ctx.openAns[q.k] && entry(q)); }
+    function wide() { return !!(root.matchMedia && root.matchMedia('(min-width: 1100px)').matches); }
     function button(q) {
       if (!q.a) return '';
       var open = !!(ctx.openAns[q.k] && entry(q));
@@ -107,8 +109,10 @@
     function toggle(btn) {
       var key = btn.getAttribute('data-key'), q = core.qByKey[key]; if (!q) return;
       var host = btn.closest('.qcard, .qpage'), slotEl = host && host.querySelector('.ans'); if (!slotEl) return;
+      var split = host.querySelector('.qsplit');
       if (!slotEl.hidden) {                                      // hide
         slotEl.hidden = true; delete ctx.openAns[key];
+        if (split) split.classList.remove('split');
         btn.setAttribute('aria-expanded', 'false'); btn.textContent = 'Show model answer'; btn.classList.remove('ghost');
         return;
       }
@@ -118,6 +122,11 @@
         if (!a) throw new Error('missing');
         ctx.openAns[key] = true;
         slotEl.innerHTML = panel(q, a, +slotEl.getAttribute('data-lvl') || 3); slotEl.hidden = false;
+        if (split) {                                             // wide screens: the question on the left, the answer on the right
+          split.classList.add('split');
+          var qb = host.querySelector('.qbody'), qs = host.querySelector('[data-act=qshow]');
+          if (wide() && qb && qb.hidden && qs) qs.click();
+        }
         btn.setAttribute('aria-expanded', 'true'); btn.textContent = 'Hide model answer'; btn.classList.add('ghost');
         typeset(slotEl);
       }).catch(function () {
@@ -148,7 +157,7 @@
     }
 
     return {
-      ansSlot: slot, ansButton: button, ansChip: chip, ansToggle: toggle, ansTick: tick, ansClear: clear, ansRestore: restore,
+      ansSlot: slot, ansButton: button, ansChip: chip, ansOpen: isOpen, ansWide: wide, ansToggle: toggle, ansTick: tick, ansClear: clear, ansRestore: restore,
       ansSummaryText: summaryText, ansSummaryEl: summaryEl, ansUrls: answerUrls, ansFile: fileFor
     };
   });

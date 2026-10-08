@@ -42,11 +42,12 @@
     }
 
     function card(q, open, skip) {
-      var p = P.papers[q.p];
+      var p = P.papers[q.p], ao = q.a && env.V.ansOpen(q.k);
+      if (ao && env.V.ansWide()) open = true;               // an open answer keeps its question beside it on wide screens
       return '<article class="qcard" id="' + qid(q) + '" data-key="' + esc(q.k) + '"><header><span class="qn">Q' + esc(q.q) + '</span><span class="qmeta">' + esc(p.l) + ' · ' + esc(p.code) + (q.m ? ' · ' + q.m + ' marks' : '') + '</span>' + (q.a ? env.V.ansChip(q.k) : '') + '</header>' +
         '<p class="qtext">' + rich(q.t) + '</p><div class="chips">' + topicChips(q, skip) + '</div>' +
         '<div class="qact"><button class="btn sm' + (open ? ' ghost' : '') + '" data-act="qshow" data-key="' + esc(q.k) + '" aria-expanded="' + !!open + '">' + (open ? 'Hide the question' : 'Show the exact question') + '</button>' + (q.a ? env.V.ansButton(q) : '') +
-        '<a class="lnk" href="' + qhref(q) + '">Open</a></div><div class="qbody"' + (open ? '' : ' hidden') + '>' + (open ? shot(q) : '') + '</div>' + (q.a ? env.V.ansSlot(q) : '') + '</article>';
+        '<a class="lnk" href="' + qhref(q) + '">Open</a></div><div class="qsplit' + (ao ? ' split' : '') + '"><div class="qbody"' + (open ? '' : ' hidden') + '>' + (open ? shot(q) : '') + '</div>' + (q.a ? env.V.ansSlot(q) : '') + '</div></article>';
     }
 
     /* ---------- the finder ---------- */
@@ -118,7 +119,8 @@
       var sibs = core.questions.filter(function (x) { return x.p === q.p; }), i = sibs.indexOf(q), prev = sibs[i - 1], next = sibs[i + 1];
       var html = '<section class="sheet" aria-labelledby="h-q1">' + u.band('Question', p.l + ' ' + p.code, true) + '<div class="body qpage"><a class="back" href="#/questions?c=' + c + '&p=' + encodeURIComponent(q.p) + '">' + u.icon('back') + 'All of ' + esc(p.l + ' ' + p.code) + '</a>' +
         '<h1 id="h-q1">Question ' + esc(q.q) + '</h1><div class="day-hero">' + u.courseChip(c) + '<span class="chip">' + esc(p.l) + '</span>' + (q.m ? '<span class="chip">' + q.m + ' marks</span>' : '') + (q.a ? env.V.ansChip(q.k) : '') + '</div>' +
-        '<p class="lede">' + rich(q.t) + '</p><div class="chips" style="margin-top:10px">' + topicChips(q) + '</div>' + shot(q) + (q.a ? '<div class="qact" style="margin-top:14px">' + env.V.ansButton(q) + '</div><p class="hint">Write your own answer first, then check it against the model answer.</p>' + env.V.ansSlot(q, 2) : '') +
+        '<div class="qsplit' + (q.a && env.V.ansOpen(q.k) ? ' split' : '') + '"><div class="qside"><p class="lede">' + rich(q.t) + '</p><div class="chips" style="margin-top:10px">' + topicChips(q) + '</div>' + shot(q) + '</div>' +
+        (q.a ? '<div class="aside"><div class="qact" style="margin-top:14px">' + env.V.ansButton(q) + '</div><p class="hint">Write your own answer first, then check it against the model answer.</p>' + env.V.ansSlot(q, 2) + '</div>' : '') + '</div>' +
         '<div class="row-actions" style="margin-top:14px"><button class="btn ghost sm" data-act="copy-qlink" data-key="' + esc(q.k) + '">' + u.icon('link') + 'Copy link to this question</button></div>' +
         '<div class="pager">' + (prev ? '<a class="btn ghost sm" href="' + qhref(prev) + '">' + u.icon('back') + 'Q' + esc(prev.q) + '</a>' : '<span></span>') + (next ? '<a class="btn ghost sm" href="' + qhref(next) + '">Q' + esc(next.q) + u.icon('next') + '</a>' : '<span></span>') + '</div></div></section>';
       return { html: html, title: 'Q' + q.q + ' ' + p.l };

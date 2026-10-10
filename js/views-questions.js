@@ -21,11 +21,11 @@
     /* A band of a page image, exactly as printed. */
     function cropBox(c, pg, y0, y1, alt) {
       var r = core.pageRatio(c, pg), url = core.pageUrl(c, pg), h = y1 - y0;
-      return '<div class="crop" style="aspect-ratio:' + (1 / (h * r)).toFixed(4) + '"><img loading="lazy" decoding="async" src="' + url + '" alt="' + esc(alt) + '" style="top:-' + (y0 / h * 100).toFixed(3) + '%"></div>';
+      return '<div class="crop" style="aspect-ratio:' + (1 / (h * r)).toFixed(4) + '"><img decoding="async" src="' + url + '" alt="' + esc(alt) + '" style="top:-' + (y0 / h * 100).toFixed(3) + '%"></div>';
     }
     function crop(q) {
       var c = core.qCourse(q), alt = 'Scanned exam question, ' + qtitle(q) + '. ' + plain(q.t);
-      if (!q.b) return '<div class="crop full" style="aspect-ratio:1/' + core.pageRatio(c, q.pg) + '"><img loading="lazy" decoding="async" src="' + core.pageUrl(c, q.pg) + '" alt="' + esc(alt) + '"></div>';
+      if (!q.b) return '<div class="crop full" style="aspect-ratio:1/' + core.pageRatio(c, q.pg) + '"><img decoding="async" src="' + core.pageUrl(c, q.pg) + '" alt="' + esc(alt) + '"></div>';
       return cropBox(c, q.pg, q.b[0], q.b[1], alt);
     }
     function zoomBtn() { return '<button class="btn ghost sm zoombtn" data-act="cropzoom" aria-pressed="false">Zoom in</button>'; }
@@ -43,7 +43,6 @@
 
     function card(q, open, skip) {
       var p = P.papers[q.p], ao = q.a && env.V.ansOpen(q.k);
-      if (ao && env.V.ansWide()) open = true;               // an open answer keeps its question beside it on wide screens
       return '<article class="qcard" id="' + qid(q) + '" data-key="' + esc(q.k) + '"><header><span class="qn">Q' + esc(q.q) + '</span><span class="qmeta">' + esc(p.l) + ' · ' + esc(p.code) + (q.m ? ' · ' + q.m + ' marks' : '') + '</span>' + (q.a ? env.V.ansChip(q.k) : '') + '</header>' +
         '<p class="qtext">' + rich(q.t) + '</p><div class="chips">' + topicChips(q, skip) + '</div>' +
         '<div class="qact"><button class="btn sm' + (open ? ' ghost' : '') + '" data-act="qshow" data-key="' + esc(q.k) + '" aria-expanded="' + !!open + '">' + (open ? 'Hide the question' : 'Show the exact question') + '</button>' + (q.a ? env.V.ansButton(q) : '') +

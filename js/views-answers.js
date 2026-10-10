@@ -122,11 +122,7 @@
         if (!a) throw new Error('missing');
         ctx.openAns[key] = true;
         slotEl.innerHTML = panel(q, a, +slotEl.getAttribute('data-lvl') || 3); slotEl.hidden = false;
-        if (split) {                                             // wide screens: the question on the left, the answer on the right
-          split.classList.add('split');
-          var qb = host.querySelector('.qbody'), qs = host.querySelector('[data-act=qshow]');
-          if (wide() && qb && qb.hidden && qs) qs.click();
-        }
+        if (split) split.classList.add('split');               // the question page puts the question beside the answer on wide screens (CSS)
         btn.setAttribute('aria-expanded', 'true'); btn.textContent = 'Hide model answer'; btn.classList.add('ghost');
         typeset(slotEl);
       }).catch(function () {

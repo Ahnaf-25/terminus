@@ -411,11 +411,12 @@ h1:focus,.view:focus{outline:none;box-shadow:none}
 .tex{color:var(--ink)}
 .figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:4px 16px;align-items:start;margin:10px 0 12px}
 .figrow .fig{margin:0}
+.figrow .fig a{width:auto}
 .figrow .fig img{width:100%}
 .fig{margin:10px 0 12px}
-.fig a{display:block;border-radius:8px;outline-offset:3px}
+.fig a{display:block;width:fit-content;max-width:100%;margin-inline:auto;border-radius:8px;outline-offset:3px}
 .fig img{display:block;width:auto;height:auto;max-width:100%;background:var(--paper-hi);border-radius:8px;padding:4px;box-sizing:border-box}
-.fig figcaption{margin-top:6px;font-size:13.5px;line-height:1.4;color:var(--ink2)}
+.fig figcaption{margin:6px auto 0;max-width:560px;text-align:center;font-size:13.5px;line-height:1.4;color:var(--ink2)}
 .ans-draw .fig{margin-top:6px}
 .ans-box{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--ticket2);font-size:14.5px}
 .ans-box>b{display:block;margin-bottom:4px}

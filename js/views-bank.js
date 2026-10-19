@@ -47,7 +47,8 @@
       var c = counts(t), s = u.state(t.id), idx = core.checkSet(t, 'kinds', getP);
       var act = c.n ? (idx.length ? '<a class="btn ghost sm" href="' + checkHref(t, 'kinds', idx) + '">Self-check</a>' : '') : '';
       return '<li class="brow" data-c="' + t.c + '"><div class="main"><h3><a href="#/bank/' + t.id + '">' + rich(t.n) + '</a></h3>' +
-        '<div class="line"><span class="chip id">' + t.id + (t.r ? ' · ' + esc(t.r) : '') + '</span>' + u.chipTag(t) + (s === 'parked' ? '<span class="chip">Set aside</span>' : '') + '</div>' +
+        '<div class="line"><span class="chip id">' + t.id + '</span>' + u.chipTag(t) + (s === 'parked' ? '<span class="chip">Set aside</span>' : '') + (t.src && t.src.length ? '<span class="bsrc">' + rich(t.src[0][0]) + '</span>' : '') + '</div>' +
+        '<p class="covers">' + rich(t.cv) + '</p>' +
         (c.n ? strip(t) : '') + '<p class="bstat">' + esc(statLine(c)) + '</p></div>' + (act ? '<div class="bact">' + act + '</div>' : '') + '</li>';
     }
     function landing(cid, params) {
@@ -106,7 +107,7 @@
       if (!main) main = '<p class="lede">No past question points here directly. Read it for understanding.</p>';
       var html = '<section class="sheet" aria-labelledby="h-bt">' + u.band('Question bank', t.id, true) + '<div class="body"><a class="back" href="#/bank/' + t.c + '">' + u.icon('back') + esc(c0.code) + ' question bank</a>' +
         '<h1 id="h-bt">' + rich(t.n) + '</h1><p class="lede">' + rich(t.cv) + '</p>' +
-        '<div class="chips" style="margin-top:12px">' + u.courseChip(t.c) + '<span class="chip id">' + t.id + '</span>' + u.chipTag(t) + '</div>' +
+        '<div class="chips" style="margin-top:12px">' + u.courseChip(t.c) + '<span class="chip id">' + t.id + '</span>' + u.chipTag(t) + '</div>' + (t.src && t.src.length ? '<p class="hint">From: ' + t.src.map(function (x) { return rich(x[0]); }).join('; ') + '</p>' : '') +
         (c.n ? strip(t) : '') + (also.length ? '<p class="hint">Also asked on ' + esc(P.papers[also[0]].code) + ' papers: ' + also.map(function (p) { return esc(P.papers[p].l); }).join(', ') + '.</p>' : '') +
         '<p class="bstat" role="status">' + esc(stat) + '</p>' + (c.n ? '<div class="row-actions bsets">' + sets + '</div>' : '') +
         '<p class="hint"><a class="lnk" href="#/topic/' + t.id + '">Study steps for this topic</a></p>' +

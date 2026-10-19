@@ -492,3 +492,5 @@ h1:focus,.view:focus{outline:none;box-shadow:none}
 .sumlist .lnk{display:inline-flex;align-items:center;min-height:44px}
 .qsearch + .tabs{margin:18px 0 0;padding:2px 2px 10px}
 .course-head{margin-top:6px}
+.brow .covers{margin:0;font-size:13.5px;color:var(--ink)}
+.bsrc{font-size:13px;color:var(--ink2)}

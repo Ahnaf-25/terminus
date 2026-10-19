@@ -172,21 +172,21 @@
 
     /* ---------- practice record: how you scored against the model answers ----------
        Saved like a preference: it does not notify subscribers, so ticking a marking point never redraws the page.
-       { "paper|q": [score, marks, pointsHash, [ticked point numbers]] } */
+       { "paper|q": [score, marks, pointsHash, [ticked point numbers], date of the last tick (ISO, optional)] } */
     var PRACT = 'fe.practice', practice = {};
     try { practice = JSON.parse(read(PRACT) || '{}') || {}; } catch (e) { practice = {}; }
     function savePractice() { write(PRACT, JSON.stringify(practice)); }
-    function getPractice(key) { var p = practice[key]; return p ? { s: p[0], m: p[1], ph: p[2], t: p[3] || [] } : null; }
+    function getPractice(key) { var p = practice[key]; return p ? { s: p[0], m: p[1], ph: p[2], t: p[3] || [], d: p[4] || null } : null; }
     function setPractice(key, ticked, score, marks, ph) {
       if (!ticked.length) delete practice[key];
-      else practice[key] = [Math.round(score * 10) / 10, marks, ph, ticked.slice()];
+      else practice[key] = [Math.round(score * 10) / 10, marks, ph, ticked.slice(), core.iso(new Date(now()))];
       savePractice();
     }
     function clearPractice() { practice = {}; savePractice(); }
     function practiceSummary(keys) {
-      var n = 0, sum = 0;
-      keys.forEach(function (k) { var p = practice[k]; if (p && p[1]) { n++; sum += p[0] / p[1]; } });
-      return { n: n, avg: n ? sum / n : 0 };
+      var n = 0, sum = 0, last = null;
+      keys.forEach(function (k) { var p = practice[k]; if (p && p[1]) { n++; sum += p[0] / p[1]; if (p[4] && (!last || p[4] > last)) last = p[4]; } });
+      return { n: n, avg: n ? sum / n : 0, last: last };
     }
     function practiceAll() { return Object.keys(practice); }
 

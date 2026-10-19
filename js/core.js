@@ -202,6 +202,58 @@
     function pageUrl(c, pg) { return 'papers/' + c + '/' + core_pad(pg) + '.webp'; }
     function core_pad(n) { return (n < 10 ? '0' : '') + n; }
 
+
+    /* ---------- question bank: a topic's past questions, newest first, grouped into kinds ---------- */
+    function paperYear(pid) {
+      var p = papers[pid], l = p ? p.l : String(pid), m = String(l).match(/(\d{2})-(\d{2})$/);
+      if (m) return 2000 + (+m[1]);
+      m = String(l).match(/J(\d{4})/); if (m) return +m[1] - 1;   /* a 2020 January paper belongs to the 19-20 year */
+      m = String(pid).match(/(\d{4})-\d{2}$/); return m ? +m[1] : 0;
+    }
+    function paperNewer(a, b) { return (paperYear(b) - paperYear(a)) || (paperRank[a] - paperRank[b]); }
+    function papersByYear(c) { return papersOfCourse(c).sort(paperNewer); }
+    function qNewer(a, b) { return paperNewer(a.p, b.p) || qOrder(a.q, b.q); }
+    function topicQs(t, weak) {
+      return (t.q || []).filter(function (x) { return weak ? !!x[2] : !x[2]; }).map(function (x) { return qByKey[x[0] + '|' + x[1]]; })
+        .filter(Boolean).sort(qNewer).map(function (q) { return q.k; });
+    }
+    function bankKeys(t) { return topicQs(t, false); }
+    function bankPart(t) { return topicQs(t, true); }
+    function kinds(t) {
+      var keys = bankKeys(t), have = {}, out = [];
+      keys.forEach(function (k) { have[k] = 1; });
+      (t.kg || []).forEach(function (g) {
+        var ks = g.filter(function (k) { return have[k]; }).sort(function (a, b) { return qNewer(qByKey[a], qByKey[b]); });
+        if (ks.length > 1) { ks.forEach(function (k) { delete have[k]; }); out.push({ lead: ks[0], keys: ks }); }
+      });
+      keys.forEach(function (k) { if (have[k]) out.push({ lead: k, keys: [k] }); });
+      out.sort(function (a, b) { return (b.keys.length - a.keys.length) || qNewer(qByKey[a.lead], qByKey[b.lead]) || (a.lead < b.lead ? -1 : 1); });
+      return out;
+    }
+    function yearStrip(t) {
+      var firm = {}, part = {};
+      (t.q || []).forEach(function (x) { (x[2] ? part : firm)[x[0]] = 1; });
+      return papersByYear(t.c).map(function (p) { return { p: p, l: papers[p].l, s: firm[p] ? 'firm' : part[p] ? 'part' : '' }; });
+    }
+    function alsoPapers(t) {
+      var seen = {}, out = [];
+      (t.q || []).forEach(function (x) { var p = papers[x[0]]; if (p && p.c !== t.c && !seen[x[0]]) { seen[x[0]] = 1; out.push(x[0]); } });
+      return out.sort(paperNewer);
+    }
+    function otherQuestions(c) { return Q.filter(function (q) { return !q.f.length && !q.w.length && qCourse(q) === c; }).sort(qNewer); }
+    /* Indices into bankKeys(t) of the questions that have a model answer, for a self-check set. */
+    function checkSet(t, set, getP) {
+      var keys = bankKeys(t), idx = {}, out = [];
+      keys.forEach(function (k, i) { idx[k] = i; });
+      function ans(k) { return !!qByKey[k].a; }
+      if (set === 'all') return keys.map(function (k, i) { return i; }).filter(function (i) { return ans(keys[i]); });
+      if (set === 'new') return keys.map(function (k, i) { return i; }).filter(function (i) { return ans(keys[i]) && !getP(keys[i]); });
+      if (set === 'low') return keys.map(function (k, i) { return i; }).filter(function (i) { var r = ans(keys[i]) && getP(keys[i]); return !!(r && r.m && r.s / r.m < 0.6); });
+      kinds(t).forEach(function (kd) { var k = kd.keys.filter(ans)[0]; if (k) out.push(idx[k]); });
+      return out.sort(function (a, b) { return a - b; });
+    }
+    function minutesFor(m) { return m ? Math.max(1, Math.round(m * 180 / 210)) : 0; }
+
     /* ---------- route line (Today): where the days of the plan sit ---------- */
     function stations() {
       var out = [];
@@ -218,6 +270,8 @@
       cutOrder: cutOrder, coreOpen: coreOpen, overload: overload, cutPrefix: cutPrefix,
       questions: Q, qByKey: qByKey, searchQuestions: searchQuestions, papersOfCourse: papersOfCourse, paperOfPage: paperOfPage, questionsOnPage: questionsOnPage,
       pageCount: pageCount, pageRatio: pageRatio, pageUrl: pageUrl, qCourse: qCourse, qOrder: qOrder,
+      paperYear: paperYear, papersByYear: papersByYear, bankKeys: bankKeys, bankPart: bankPart, kinds: kinds, yearStrip: yearStrip, alsoPapers: alsoPapers,
+      otherQuestions: otherQuestions, checkSet: checkSet, minutesFor: minutesFor,
       dayInfo: dayInfo, windowFor: windowFor, nextExam: nextExam, stage: stage, monthGrid: monthGrid, stations: stations
     };
   }

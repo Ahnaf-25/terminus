@@ -99,7 +99,7 @@
     function questions(arg, params) {
       var f = ctx.qf;
       var html = '<section class="sheet" aria-labelledby="h-q">' + u.band('Questions', 'Find any past question', true) +
-        '<div class="body"><h1 id="h-q">Past questions</h1><p class="lede">Search by a word, a topic or a question number, or browse a paper. Open a question to see it exactly as printed in the paper.</p>' +
+        '<div class="body"><h1 id="h-q">Past questions</h1>' + env.V.bankMode('questions') + '<p class="lede">Search by a word, a topic or a question number, or browse a paper. Open a question to see it exactly as printed in the paper.</p>' +
         '<form class="qsearch" role="search" data-qform><label class="sr" for="qs">Search past questions</label><input id="qs" type="search" inputmode="search" autocomplete="off" spellcheck="false" placeholder="Try: weibull, jominy, npv, 23-24 q5b" value="' + esc(f.q) + '"></form>' +
         '<div id="qfilters">' + filters(f) + '</div><div id="qresults">' + results(f) + '</div></div></section>';
       return { html: html, title: 'Questions' };

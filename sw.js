@@ -1,7 +1,7 @@
 /* Terminus service worker.
    Precaches the whole app so it opens with no network. Files are served from the cache first and refreshed in the
    background; a new version (new cache name) replaces the old one the next time the app is opened online. */
-const CACHE = 'fe-ff73d7d3f0';
+const CACHE = 'fe-115d072a85';
 const ANSWERS = 'fe-answers';   // model answers: content-hashed files, kept across app updates
 const PAPERS = 'fe-papers-fb9fd4e6';   // scanned past-paper pages: cached as they are opened, or all at once from More
 const ASSETS = [
@@ -22,6 +22,7 @@ const ASSETS = [
   "js/tear.js",
   "js/ui.js",
   "js/views-answers.js",
+  "js/views-bank.js",
   "js/views-courses.js",
   "js/views-more.js",
   "js/views-questions.js",

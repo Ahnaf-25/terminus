@@ -445,3 +445,48 @@ h1:focus,.view:focus{outline:none;box-shadow:none}
 }
 /* an answer that overflows (a very long formula) scrolls inside its panel instead of spilling out */
 .ans{overflow-x:auto}
+
+/* ---------- question bank ---------- */
+.seg a{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;font:600 14px var(--sans);color:var(--ink);text-decoration:none}
+.seg a[aria-current="page"]{background:var(--ink);color:var(--ticket)}
+.seg a:not([aria-current]):hover{background:var(--ticket2)}
+.qmode{margin:10px 0 4px}
+.blist{list-style:none;margin:0;padding:0}
+.brow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 12px;padding:12px 0 14px;border-top:1.5px dotted var(--rule);align-items:center}
+.brow .main{min-width:0;display:grid;gap:5px}
+.brow h3{font-size:17px}
+.brow h3 a{text-decoration:none}
+.brow h3 a:hover{text-decoration:underline;text-underline-offset:3px}
+.brow .line{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:13px;color:var(--ink2)}
+.bstat{margin:0;font-size:13.5px;color:var(--ink2)}
+.yrs{display:flex;flex-wrap:wrap;gap:4px 8px;padding:2px 0}
+.yr{display:grid;justify-items:center;gap:2px;min-width:28px}
+.yr .hole{width:16px;height:16px;aspect-ratio:auto}
+.yr small{font:600 10px var(--mono);color:var(--ink2)}
+.hole.part{border-style:dashed;border-color:var(--ink2)}
+.hole.cur{border:2px solid var(--cc,var(--red))}
+.bsets{margin:10px 0 4px}
+.bsets .btn[aria-disabled="true"]{opacity:.5;cursor:default}
+.kind{background:var(--ticket2);border-radius:12px;padding:4px 14px 12px;margin-top:14px;border-left:4px solid var(--cc,var(--ink2))}
+.khead{font-size:15px;margin:10px 0 0;color:var(--ink2);font-weight:600}
+.khead .mono{display:inline-block;margin-right:8px;color:var(--ink);font-weight:700;text-transform:uppercase;font-size:12px;letter-spacing:.08em}
+.kind .qcard{border-top:0}
+.vers summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:14px;font-weight:600;color:var(--ink2)}
+.bank-cols{display:block}
+.bank-nav{display:none}
+.bank-main h2:first-child{margin-top:18px}
+.slipmeter{display:grid;grid-template-columns:repeat(auto-fill,16px);gap:6px;margin:6px 0 8px}
+.slipmeter .hole{width:16px;height:16px;aspect-ratio:auto}
+.slip .pager{flex-wrap:wrap;align-items:center}
+.sumlist{list-style:none;margin:12px 0;padding:0;display:grid;gap:6px}
+.sumlist li{display:flex;justify-content:space-between;gap:12px;align-items:center;min-height:44px;padding:0 12px;border-radius:8px;background:var(--ticket2)}
+@media (min-width:900px){
+  .bank-cols{display:grid;grid-template-columns:220px minmax(0,1fr);gap:0 36px;align-items:start;margin-top:12px}
+  .bank-nav{display:block;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+  .bank-nav ol{list-style:none;margin:0;padding:0;border-left:1.5px dotted var(--rule)}
+  .bank-nav a{display:block;padding:8px 10px;font-size:13.5px;line-height:1.3;color:var(--ink2);text-decoration:none;border-radius:0 8px 8px 0}
+  .bank-nav a:hover{background:var(--ticket2);color:var(--ink)}
+  .bank-nav a[aria-current="page"]{background:var(--ticket2);color:var(--ink);font-weight:700;box-shadow:inset 3px 0 0 var(--cc,var(--ink))}
+  .bank-nav .mono{display:block;font-size:11px;letter-spacing:.06em}
+}
+.sumlist .lnk{display:inline-flex;align-items:center;min-height:44px}

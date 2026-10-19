@@ -38,7 +38,7 @@
   })();
 
   /* ---------- navigation ---------- */
-  var TABS = [['today', 'Today', '#/', 'Today'], ['plan', 'Plan', '#/plan', 'Plan'], ['courses', 'Courses', '#/courses', 'Courses'], ['questions', 'Questions', '#/questions', 'Questions'], ['cut', 'Cut', '#/cut', 'Cut order'], ['more', 'More', '#/more', 'More']];
+  var TABS = [['today', 'Today', '#/', 'Today'], ['plan', 'Plan', '#/plan', 'Plan'], ['courses', 'Courses', '#/courses', 'Courses'], ['questions', 'Questions', '#/bank', 'Questions'], ['cut', 'Cut', '#/cut', 'Cut order'], ['more', 'More', '#/more', 'More']];
   $('nav').innerHTML = TABS.map(function (t) { return '<a href="' + t[2] + '" data-tab="' + t[0] + '" aria-label="' + t[3] + '">' + FE.ui.icon(t[0]) + '<span>' + t[1] + '</span></a>'; }).join('');
 
   function parse() {
@@ -54,6 +54,8 @@
       case 'courses': return [V.courses(r.arg), 'courses'];
       case 'topic': return [V.topic(r.arg), 'courses'];
       case 'questions': ctx.qf = V.qfFrom(r.params); return [V.questions(r.arg, r.params), 'questions'];
+      case 'bank': return [V.bank(r.arg, r.params), 'questions'];
+      case 'check': return [V.check(r.arg, r.params), 'questions'];
       case 'q': return [V.question(r.arg), 'questions'];
       case 'page': return [V.page(r.arg, r.params), 'questions'];
       case 'cut': return [V.cut(r.arg), 'cut'];
@@ -322,7 +324,11 @@
     else if (t.id === 'qpr') { ctx.qf.pr = t.value; ctx.qf.n = V.qPAGE; V.qfRefresh(); }
     else if (t.getAttribute && t.getAttribute('data-act') === 'anspt') V.ansTick(t);
   });
-  doc.addEventListener('submit', function (ev) { if (ev.target && ev.target.hasAttribute && ev.target.hasAttribute('data-qform')) { ev.preventDefault(); var inp = $('qs'); if (inp) inp.blur(); } });
+  doc.addEventListener('submit', function (ev) {
+    var f = ev.target; if (!f || !f.hasAttribute) return;
+    if (f.hasAttribute('data-qform')) { ev.preventDefault(); var inp = $('qs'); if (inp) inp.blur(); }
+    else if (f.hasAttribute('data-bankq')) { ev.preventDefault(); var b = $('bq'); root.location.hash = '#/questions' + (b && b.value.trim() ? '?q=' + encodeURIComponent(b.value.trim()) : ''); }
+  });
   doc.addEventListener('keydown', function (ev) {
     var tag = ev.target && ev.target.tagName; if (tag === 'TEXTAREA' || tag === 'INPUT') return;
     if ((ev.ctrlKey || ev.metaKey) && !ev.altKey) {

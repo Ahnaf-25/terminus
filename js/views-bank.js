@@ -16,7 +16,7 @@
     /* "By topic | Search and papers" switch, shown at the top of the bank and of the finder. */
     function bankMode(active) {
       return '<nav class="seg qmode" aria-label="Question views"><a href="#/bank"' + (active === 'bank' ? ' aria-current="page"' : '') + '>By topic</a>' +
-        '<a href="#/questions"' + (active === 'questions' ? ' aria-current="page"' : '') + '>Search and papers</a></nav>';
+        '<a href="#/questions"' + (active === 'questions' ? ' aria-current="page"' : '') + '>By paper</a></nav>';
     }
     function searchForm() {
       return '<form class="qsearch" role="search" data-bankq><label class="sr" for="bq">Search past questions</label><input id="bq" type="search" inputmode="search" autocomplete="off" spellcheck="false" placeholder="Search every question: weibull, jominy, npv"></form>';
